@@ -1,9 +1,11 @@
-// components/ClientsTable.jsx
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { format, differenceInDays } from "date-fns";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import ClientTasksModal from "./ClientTasksModal";
+import toast from "react-hot-toast";
+import StatsCard from "./StatsCard";
+import { Users, Calendar, AlertCircle, Clock } from "lucide-react";
 
 export default function ClientsTable({ clients, onUpdateClient }) {
   const [search, setSearch] = useState("");
@@ -13,15 +15,29 @@ export default function ClientsTable({ clients, onUpdateClient }) {
   const [selected, setSelected] = useState(new Set());
   const [modalTask, setModalTask] = useState(null);
   const rowsPerPage = 5;
-
-  // Clear reminder timeouts on unmount
   const reminderTimeouts = useRef([]);
-  useEffect(() => () => reminderTimeouts.current.forEach(clearTimeout), []);
 
-  // 1️⃣ Filter
+  useEffect(() => {
+    const soonDueClients = clients.filter((c) => {
+      const daysLeft = differenceInDays(new Date(c.due), new Date());
+      return daysLeft >= 0 && daysLeft <= 3;
+    });
+
+    soonDueClients.forEach((c) => {
+      toast(`🔔 “${c.name}” has a task due in ${differenceInDays(new Date(c.due), new Date())} day(s)!`);
+    });
+
+    return () => {
+      reminderTimeouts.current.forEach(clearTimeout);
+    };
+  }, [clients]);
+
   const filtered = useMemo(
     () =>
-      clients.filter(
+      clients.map((c) => ({
+        ...c,
+        avatarUrl: c.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}`,
+      })).filter(
         (c) =>
           c.name.toLowerCase().includes(search.toLowerCase()) ||
           c.email.toLowerCase().includes(search.toLowerCase())
@@ -29,29 +45,22 @@ export default function ClientsTable({ clients, onUpdateClient }) {
     [clients, search]
   );
 
-  // 2️⃣ Sort
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
       const aVal = a[sortField].toLowerCase();
       const bVal = b[sortField].toLowerCase();
-      if (aVal < bVal) return sortAsc ? -1 : 1;
-      if (aVal > bVal) return sortAsc ? 1 : -1;
-      return 0;
+      return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
   }, [filtered, sortField, sortAsc]);
 
-  // 3️⃣ Paginate
   const totalPages = Math.ceil(sorted.length / rowsPerPage);
   const paginated = useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     return sorted.slice(start, start + rowsPerPage);
   }, [sorted, page]);
-
-  // Select‐all state
   const allOnPage = paginated.every((c) => selected.has(c.id));
   const someOnPage = paginated.some((c) => selected.has(c.id));
 
-  // Sortable header helper
   const header = (label, field) => (
     <th
       onClick={() => {
@@ -68,13 +77,11 @@ export default function ClientsTable({ clients, onUpdateClient }) {
     </th>
   );
 
-  // Bulk delete
   const deleteSelected = () => {
     onUpdateClient((all) => all.filter((c) => !selected.has(c.id)));
     setSelected(new Set());
   };
 
-  // Bulk export
   const exportSelected = () => {
     const rows = clients.filter((c) => selected.has(c.id));
     const head = ["id", "name", "email", "status", "priority", "due"];
@@ -104,7 +111,36 @@ export default function ClientsTable({ clients, onUpdateClient }) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 flex flex-col">
-      {/* Search + Bulk Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatsCard
+          icon={Users}
+          label="Total Clients"
+          value={clients.length}
+          color={{ bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-900 dark:text-blue-100" }}
+        />
+        <StatsCard
+          icon={Calendar}
+          label="Tasks Due Today"
+          value={clients.filter(c => differenceInDays(new Date(c.due), new Date()) === 0).length}
+          color={{ bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-900 dark:text-yellow-100" }}
+        />
+        <StatsCard
+          icon={AlertCircle}
+          label="Overdue Tasks"
+          value={clients.filter(c => differenceInDays(new Date(c.due), new Date()) < 0).length}
+          color={{ bg: "bg-red-100 dark:bg-red-900", text: "text-red-900 dark:text-red-100" }}
+        />
+        <StatsCard
+          icon={Clock}
+          label="Upcoming (3 days)"
+          value={clients.filter(c => {
+            const d = differenceInDays(new Date(c.due), new Date());
+            return d > 0 && d <= 3;
+          }).length}
+          color={{ bg: "bg-green-100 dark:bg-green-900", text: "text-green-900 dark:text-green-100" }}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center mb-4 space-x-2">
         <Search className="text-gray-400" />
         <input
@@ -117,45 +153,13 @@ export default function ClientsTable({ clients, onUpdateClient }) {
             setPage(1);
           }}
         />
-        {selected.size > 0 && (
-          <div className="flex space-x-2">
-            <button
-              onClick={exportSelected}
-              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Export {selected.size} CSV
-            </button>
-            <button
-              onClick={deleteSelected}
-              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              Delete {selected.size}
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Table */}
       <div className="overflow-auto">
         <table className="w-full table-auto">
           <thead className="sticky top-0 bg-white dark:bg-gray-800 z-10">
             <tr className="text-gray-500 dark:text-gray-400">
-              <th className="pl-2">
-                <input
-                  type="checkbox"
-                  aria-label="Select all clients on page"
-                  checked={allOnPage}
-                  ref={(el) =>
-                    el && (el.indeterminate = !allOnPage && someOnPage)
-                  }
-                  onChange={(e) => {
-                    const next = new Set(selected);
-                    if (e.target.checked) paginated.forEach((c) => next.add(c.id));
-                    else paginated.forEach((c) => next.delete(c.id));
-                    setSelected(next);
-                  }}
-                />
-              </th>
+              <th className="pl-2"></th>
               {header("Name", "name")}
               {header("Email", "email")}
               <th>Status</th>
@@ -166,28 +170,11 @@ export default function ClientsTable({ clients, onUpdateClient }) {
           </thead>
           <tbody>
             {paginated.map((c) => {
-              const daysLeft = differenceInDays(new Date(c.due), new Date());
-              const dueClass =
-                daysLeft <= 3
-                  ? "text-red-500"
-                  : daysLeft <= 7
-                  ? "text-yellow-400"
-                  : "text-green-500";
-              const priorityColor = {
-                High: "bg-red-100 text-red-600",
-                Medium: "bg-yellow-100 text-yellow-600",
-                Low: "bg-green-100 text-green-600",
-              }[c.priority];
-
               return (
-                <tr
-                  key={c.id}
-                  className="border-t dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
+                <tr key={c.id}>
                   <td className="pl-2">
                     <input
                       type="checkbox"
-                      aria-label={`Select client ${c.name}`}
                       checked={selected.has(c.id)}
                       onChange={(e) => {
                         const next = new Set(selected);
@@ -197,47 +184,22 @@ export default function ClientsTable({ clients, onUpdateClient }) {
                       }}
                     />
                   </td>
-                  <td className="py-2">{c.name}</td>
+                  <td className="py-2 flex items-center space-x-3">
+                    <img
+                      src={c.avatarUrl}
+                      alt={c.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span>{c.name}</span>
+                  </td>
                   <td>{c.email}</td>
-                  <td>
-                    <span
-                      className={`px-2 py-1 rounded-full text-sm ${
-                        c.status === "Active"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
-                      }`}
-                    >
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="hidden md:table-cell">
-                    <span
-                      className={`px-2 py-1 rounded-full text-sm ${priorityColor}`}
-                    >
-                      {c.priority}
-                    </span>
-                  </td>
-                  <td className="py-2 hidden lg:table-cell flex items-center space-x-2">
-                    <span className={dueClass}>
-                      {format(new Date(c.due), "MMM d, yyyy")}
-                    </span>
+                  <td>{c.status}</td>
+                  <td className="hidden md:table-cell">{c.priority}</td>
+                  <td className="hidden lg:table-cell">{format(new Date(c.due), "MMM d, yyyy")}</td>
+                  <td className="hidden lg:table-cell">
                     <button
-                      disabled={new Date(c.due) <= Date.now()}
-                      className="px-2 py-1 text-sm bg-blue-100 rounded hover:bg-blue-200 disabled:opacity-50"
-                      onClick={() => {
-                        const msUntil = new Date(c.due) - Date.now();
-                        const id = setTimeout(() => {
-                          alert(`🔔 Reminder: “${c.name}”’s task is due today!`);
-                        }, msUntil);
-                        reminderTimeouts.current.push(id);
-                        alert("✅ Reminder set!");
-                      }}
-                    >
-                      Remind me
-                    </button>
-                    <button
-                      className="px-2 py-1 text-sm bg-indigo-100 rounded hover:bg-indigo-200"
                       onClick={() => setModalTask(c)}
+                      className="px-2 py-1 text-sm bg-indigo-100 rounded hover:bg-indigo-200"
                     >
                       Edit
                     </button>
@@ -249,38 +211,6 @@ export default function ClientsTable({ clients, onUpdateClient }) {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-center space-x-2">
-        <button
-          onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          disabled={page === 1}
-          className="p-2 disabled:opacity-50"
-        >
-          <ChevronLeft />
-        </button>
-        {Array.from({ length: totalPages }, (_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => setPage(i + 1)}
-            className={`px-3 py-1 rounded ${
-              page === i + 1
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
-          >
-            {i + 1}
-          </button>
-        ))}
-        <button
-          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          disabled={page === totalPages}
-          className="p-2 disabled:opacity-50"
-        >
-          <ChevronRight />
-        </button>
-      </div>
-
-      {/* Edit Task Modal */}
       {modalTask && (
         <ClientTasksModal
           task={modalTask}

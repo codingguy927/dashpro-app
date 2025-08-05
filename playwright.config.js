@@ -2,16 +2,17 @@
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 const config = {
   testDir: 'tests',
-  timeout: 2 * 60 * 1000,      // 2 minutes per test
+  timeout: 2 * 60 * 1000,
   use: {
     headless: true,
-    viewport: { width: 1280, height: 720 },
-    baseURL: 'http://localhost:3000',   // <-- so `page.goto('/clients')` works
+    baseURL: 'http://localhost:3000',
   },
   webServer: {
     command: 'npm run dev',
     port: 3000,
-    reuseExistingServer: !process.env.CI, // don't start if one is already running
+    timeout: 120_000,
+    reuseExistingServer: true,    // ← Playwright will detect your running server
   },
 };
+
 module.exports = config;
