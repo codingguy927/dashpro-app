@@ -1,27 +1,75 @@
 [
   {
-    "id": "1",
+    "id": 1,
     "name": "Alice Smith",
     "email": "alice@example.com",
     "status": "Active",
-    "priority": "High",
-    "due": "2025-06-30T09:00:00.000Z"
+    "tasks": [
+      {
+        "id": "t1",
+        "title": "Submit proposal",
+        "completed": true,
+        "priority": "high",
+        "dueDate": "2025-08-14"
+      },
+      {
+        "id": "t2",
+        "title": "Follow up with client",
+        "completed": false,
+        "priority": "medium",
+        "dueDate": "2025-08-19"
+      }
+    ]
   },
   {
-    "id": "2",
+    "id": 2,
     "name": "Bob Jones",
     "email": "bob@example.com",
     "status": "Inactive",
-    "priority": "Low",
-    "due": "2025-08-07T17:00:00.000Z"
+    "tasks": [
+      {
+        "id": "t3",
+        "title": "Prepare onboarding docs",
+        "completed": false,
+        "priority": "high",
+        "dueDate": "2025-08-18"
+      },
+      {
+        "id": "t4",
+        "title": "Send follow-up email",
+        "completed": false,
+        "priority": "low",
+        "dueDate": "2025-08-25"
+      }
+    ]
   },
   {
-    "id": "3",
+    "id": 3,
     "name": "Carol Lee",
     "email": "carol@example.com",
     "status": "Active",
-    "priority": "Medium",
-    "due": "2025-07-17T12:00:00.000Z"
+    "tasks": [
+      {
+        "id": "t5",
+        "title": "Finalize design mockups",
+        "completed": true,
+        "priority": "medium",
+        "dueDate": "2025-08-12"
+      },
+      {
+        "id": "t6",
+        "title": "Client review meeting",
+        "completed": false,
+        "priority": "high",
+        "dueDate": "2025-08-21"
+      },
+      {
+        "id": "t7",
+        "title": "Update project plan",
+        "completed": false,
+        "priority": "low",
+        "dueDate": "2025-08-24"
+      }
+    ]
   }
-
 ]

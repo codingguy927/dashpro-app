@@ -1,31 +1,25 @@
 "use client";
 
-import { Fragment, useState, useContext } from "react";
-import { Dialog, Transition }            from "@headlessui/react";
-import { Plus, X }                       from "lucide-react";
-import { AuthContext }                   from "./Providers";
+import { Fragment, useState } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { Plus, X } from "lucide-react";
 
 export default function AddClientModal({ onClientAdded }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "" });
-  const { token } = useContext(AuthContext);
 
-  const submit = async e => {
+  const submit = (e) => {
     e.preventDefault();
-    const res = await fetch("/api/clients", {
-      method:  "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization:  `Bearer ${token}`,
-      },
-      body: JSON.stringify({ ...form, status: "Active" }),
-    });
-    if (res.ok) {
-      const newClient = await res.json();
-      onClientAdded(newClient);
-      setForm({ name:"", email:"" });
-      setOpen(false);
-    }
+    const newClient = {
+      id: Date.now(),
+      name: form.name,
+      email: form.email,
+      status: "Active",
+      tasks: [],
+    };
+    onClientAdded(newClient);
+    setForm({ name: "", email: "" });
+    setOpen(false);
   };
 
   return (
@@ -54,55 +48,45 @@ export default function AddClientModal({ onClientAdded }) {
 
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <Dialog.Title className="text-xl font-semibold">
-                      Add New Client
-                    </Dialog.Title>
-                    <button onClick={() => setOpen(false)}>
-                      <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+              <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <Dialog.Title className="text-xl font-semibold">
+                    Add New Client
+                  </Dialog.Title>
+                  <button onClick={() => setOpen(false)}>
+                    <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+                  </button>
+                </div>
+                <form onSubmit={submit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium">Name</label>
+                    <input
+                      required
+                      value={form.name}
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      className="mt-1 w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Email</label>
+                    <input
+                      required
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      className="mt-1 w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div className="text-right">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      Create
                     </button>
                   </div>
-                  <form onSubmit={submit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium">Name</label>
-                      <input
-                        required
-                        value={form.name}
-                        onChange={e => setForm(f => ({...f, name: e.target.value}))}
-                        className="mt-1 w-full border rounded px-3 py-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium">Email</label>
-                      <input
-                        required
-                        type="email"
-                        value={form.email}
-                        onChange={e => setForm(f => ({...f, email: e.target.value}))}
-                        className="mt-1 w-full border rounded px-3 py-2"
-                      />
-                    </div>
-                    <div className="text-right">
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                      >
-                        Create
-                      </button>
-                    </div>
-                  </form>
-                </Dialog.Panel>
-              </Transition.Child>
+                </form>
+              </Dialog.Panel>
             </div>
           </div>
         </Dialog>
